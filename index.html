@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EarnApp - Real Rewards Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+    <!-- Auth View -->
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+            <h1 class="text-3xl font-black text-indigo-600 mb-2">EarnApp 💸</h1>
+            <p class="text-slate-500 mb-6">Sign in with your phone number to start earning.</p>
+            <input type="text" id="name-input" placeholder="Your Name" class="w-full mb-4 p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+            <input type="text" id="phone-input" placeholder="Phone Number (e.g., 2547XXXXXXXX)" class="w-full mb-4 p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+            <button onclick="handleLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-xl font-bold transition">Get Started</button>
+        </div>
+    </div>
+
+    <!-- Main Dashboard View -->
+    <div id="dashboard-screen" class="hidden min-h-screen pb-12">
+        <header class="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+            <h1 class="text-xl font-black text-indigo-600">EarnApp</h1>
+            <div class="flex items-center gap-4">
+                <div class="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl font-bold text-sm border border-emerald-200">
+                    Balance: KES <span id="user-balance">0.00</span>
+                </div>
+                <button onclick="logout()" class="text-slate-400 hover:text-slate-600 text-sm font-semibold">Logout</button>
+            </div>
+        </header>
+
+        <main class="max-w-2xl mx-auto p-4 mt-4 space-y-6">
+            <!-- Tabs -->
+            <div class="flex bg-slate-200 p-1 rounded-xl">
+                <button onclick="switchTab('tasks')" id="tab-btn-tasks" class="flex-1 py-2 font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition">Tasks</button>
+                <button onclick="switchTab('wallet')" id="tab-btn-wallet" class="flex-1 py-2 font-bold rounded-lg text-slate-600 transition">Withdraw</button>
+                <button onclick="switchTab('admin')" id="tab-btn-admin" class="hidden flex-1 py-2 font-bold rounded-lg text-slate-600 transition">Admin Panel</button>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div id="tab-tasks" class="space-y-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800">Watch Sponsored Ad & Answer</h3>
+                        <p class="text-xs text-slate-500 mt-1">Earn KES 5.00 for watching a 30s partner video.</p>
+                    </div>
+                    <button onclick="completeTask('Watch Ad', 5)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">Start</button>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-800">Quick Market Survey</h3>
+                        <p class="text-xs text-slate-500 mt-1">Complete a 2-minute survey about local apps.</p>
+                    </div>
+                    <button onclick="completeTask('Survey', 15)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">Start</button>
+                </div>
+            </div>
+
+            <!-- Wallet / Withdraw Tab -->
+            <div id="tab-wallet" class="hidden space-y-4">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border">
+                    <h2 class="font-bold text-lg mb-4">Request M-Pesa Payout</h2>
+                    <input type="number" id="withdraw-amount" placeholder="Amount in KES (Min: 50)" class="w-full mb-4 p-3 border rounded-xl outline-none">
+                    <button onclick="requestWithdrawal()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-3 rounded-xl font-bold transition">Withdraw via M-Pesa</button>
+                </div>
+            </div>
+
+            <!-- Admin Panel Tab -->
+            <div id="tab-admin" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border">
+                    <h2 class="font-bold text-lg mb-4 text-indigo-600">Admin Control Center</h2>
+                    <h3 class="font-semibold text-sm text-slate-600 mb-2">Pending Payout Requests</h3>
+                    <div id="admin-transactions" class="space-y-2">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let currentUser = null;
+
+        async function handleLogin() {
+            const name = document.getElementById('name-input').value;
+            const phone = document.getElementById('phone-input').value;
+            if(!phone) return alert('Please enter phone number');
+
+            const res = await fetch(`${API_URL}/auth`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, phone })
+            });
+            const data = await res.json();
+            if(data.success) {
+                currentUser = data.user;
+                document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('dashboard-screen').classList.remove('hidden');
+
+                if(currentUser.isAdmin || currentUser.phone === '254700000000') {
+                    document.getElementById('tab-btn-admin').classList.remove('hidden');
+                }
+            }
+        }
+
+        async function completeTask(taskName, reward) {
+            alert(`Completing task: ${taskName}. Simulating verification...`);
+            const res = await fetch(`${API_URL}/earn`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: currentUser.phone, reward, taskName })
+            });
+            const data = await res.json();
+            if(data.success) {
+                currentUser.balance = data.newBalance;
+                document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
+                alert(`Successfully earned KES ${reward}!`);
+            }
+        }
+
+        async function requestWithdrawal() {
+            const amount = document.getElementById('withdraw-amount').value;
+            if(!amount || amount < 50) return alert('Minimum withdrawal is KES 50');
+
+            const res = await fetch(`${API_URL}/withdraw`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ phone: currentUser.phone, amount })
+            });
+            const data = await res.json();
+            if(data.success) {
+                currentUser.balance = data.newBalance;
+                document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
+                alert('Withdrawal request submitted successfully!');
+            } else {
+                alert(data.error);
+            }
+        }
+
+        async function loadAdminData() {
+            const res = await fetch(`${API_URL}/admin/data`);
+            const data = await res.json();
+            if(data.success) {
+                const container = document.getElementById('admin-transactions');
+                container.innerHTML = data.transactions.map(tx => `
+                    <div class="flex justify-between items-center p-3 bg-slate-50 border rounded-xl text-sm">
+                        <div>
+                            <span class="font-bold">${tx.phone}</span> - ${tx.type}: <span class="text-indigo-600 font-bold">KES ${tx.amount}</span>
+                            <br><span class="text-xs text-slate-400">Status: ${tx.status}</span>
+                        </div>
+                        ${tx.status === 'Pending' ? `<button onclick="approvePayout('${tx._id}')" class="bg-emerald-600 text-white px-3 py-1 rounded-lg text-xs font-bold">Approve</button>` : ''}
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function approvePayout(transactionId) {
+            await fetch(`${API_URL}/admin/approve`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ transactionId })
+            });
+            loadAdminData();
+        }
+
+        function switchTab(tab) {
+            document.getElementById('tab-tasks').classList.add('hidden');
+            document.getElementById('tab-wallet').classList.add('hidden');
+            document.getElementById('tab-admin').classList.add('hidden');
+            document.getElementById('tab-btn-tasks').className = 'flex-1 py-2 font-bold rounded-lg text-slate-600 transition';
+            document.getElementById('tab-btn-wallet').className = 'flex-1 py-2 font-bold rounded-lg text-slate-600 transition';
+            document.getElementById('tab-btn-admin').className = 'flex-1 py-2 font-bold rounded-lg text-slate-600 transition';
+
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tab}`).className = 'flex-1 py-2 font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition';
+
+            if(tab === 'admin') loadAdminData();
+        }
+
+        function logout() { location.reload(); }
+    </script>
+</body>
+</html>
