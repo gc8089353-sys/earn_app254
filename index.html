@@ -80,89 +80,112 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:5000/api';
         let currentUser = null;
 
-        async function handleLogin() {
-            const name = document.getElementById('name-input').value;
-            const phone = document.getElementById('phone-input').value;
-            if(!phone) return alert('Please enter phone number');
+        function getData() {
+            let users = JSON.parse(localStorage.getItem('earnapp_users') || '{}');
+            let txs = JSON.parse(localStorage.getItem('earnapp_txs') || '[]');
+            return { users, txs };
+        }
 
-            const res = await fetch(`${API_URL}/auth`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, phone })
-            });
-            const data = await res.json();
-            if(data.success) {
-                currentUser = data.user;
-                document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('dashboard-screen').classList.remove('hidden');
+        function saveData(users, txs) {
+            localStorage.setItem('earnapp_users', JSON.stringify(users));
+            localStorage.setItem('earnapp_txs', JSON.stringify(txs));
+        }
 
-                if(currentUser.isAdmin || currentUser.phone === '254700000000') {
-                    document.getElementById('tab-btn-admin').classList.remove('hidden');
-                }
+        function handleLogin() {
+            const name = document.getElementById('name-input').value.trim();
+            const phone = document.getElementById('phone-input').value.trim();
+            if(!phone || !name) return alert('Please enter both name and phone number');
+
+            let { users, txs } = getData();
+            if(!users[phone]) {
+                users[phone] = { name, phone, balance: 0, isAdmin: (phone === '254700000000') };
+            }
+            currentUser = users[phone];
+            saveData(users, txs);
+            
+            initDashboard();
+        }
+
+        function initDashboard() {
+            document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+
+            if(currentUser.isAdmin) {
+                document.getElementById('tab-btn-admin').classList.remove('hidden');
             }
         }
 
-        async function completeTask(taskName, reward) {
+        function completeTask(taskName, reward) {
             alert(`Completing task: ${taskName}. Simulating verification...`);
-            const res = await fetch(`${API_URL}/earn`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: currentUser.phone, reward, taskName })
+            let { users, txs } = getData();
+
+            users[currentUser.phone].balance += Number(reward);
+            currentUser = users[currentUser.phone];
+
+            txs.unshift({
+                id: Date.now(),
+                phone: currentUser.phone,
+                type: 'EARN',
+                amount: reward,
+                status: 'Completed'
             });
-            const data = await res.json();
-            if(data.success) {
-                currentUser.balance = data.newBalance;
-                document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
-                alert(`Successfully earned KES ${reward}!`);
-            }
+
+            saveData(users, txs);
+            document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
+            alert(`Successfully earned KES ${reward}!`);
         }
 
-        async function requestWithdrawal() {
-            const amount = document.getElementById('withdraw-amount').value;
+        function requestWithdrawal() {
+            const amount = parseFloat(document.getElementById('withdraw-amount').value);
             if(!amount || amount < 50) return alert('Minimum withdrawal is KES 50');
+            if(currentUser.balance < amount) return alert('Insufficient balance');
 
-            const res = await fetch(`${API_URL}/withdraw`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ phone: currentUser.phone, amount })
+            let { users, txs } = getData();
+            users[currentUser.phone].balance -= amount;
+            currentUser = users[currentUser.phone];
+
+            txs.unshift({
+                id: Date.now(),
+                phone: currentUser.phone,
+                type: 'WITHDRAWAL',
+                amount: amount,
+                status: 'Pending'
             });
-            const data = await res.json();
-            if(data.success) {
-                currentUser.balance = data.newBalance;
-                document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
-                alert('Withdrawal request submitted successfully!');
-            } else {
-                alert(data.error);
-            }
+
+            saveData(users, txs);
+            document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
+            document.getElementById('withdraw-amount').value = '';
+            alert('Withdrawal request submitted successfully!');
         }
 
-        async function loadAdminData() {
-            const res = await fetch(`${API_URL}/admin/data`);
-            const data = await res.json();
-            if(data.success) {
-                const container = document.getElementById('admin-transactions');
-                container.innerHTML = data.transactions.map(tx => `
-                    <div class="flex justify-between items-center p-3 bg-slate-50 border rounded-xl text-sm">
-                        <div>
-                            <span class="font-bold">${tx.phone}</span> - ${tx.type}: <span class="text-indigo-600 font-bold">KES ${tx.amount}</span>
-                            <br><span class="text-xs text-slate-400">Status: ${tx.status}</span>
-                        </div>
-                        ${tx.status === 'Pending' ? `<button onclick="approvePayout('${tx._id}')" class="bg-emerald-600 text-white px-3 py-1 rounded-lg text-xs font-bold">Approve</button>` : ''}
+        function loadAdminData() {
+            let { txs } = getData();
+            const container = document.getElementById('admin-transactions');
+            if(txs.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400">No transactions yet.</p>`;
+                return;
+            }
+            container.innerHTML = txs.map(tx => `
+                <div class="flex justify-between items-center p-3 bg-slate-50 border rounded-xl text-sm">
+                    <div>
+                        <span class="font-bold">${tx.phone}</span> - ${tx.type}: <span class="text-indigo-600 font-bold">KES ${tx.amount}</span>
+                        <br><span class="text-xs text-slate-400">Status: ${tx.status}</span>
                     </div>
-                `).join('');
-            }
+                    ${tx.status === 'Pending' ? `<button onclick="approvePayout(${tx.id})" class="bg-emerald-600 text-white px-3 py-1 rounded-lg text-xs font-bold">Approve</button>` : ''}
+                </div>
+            `).join('');
         }
 
-        async function approvePayout(transactionId) {
-            await fetch(`${API_URL}/admin/approve`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ transactionId })
+        function approvePayout(txId) {
+            let { users, txs } = getData();
+            txs = txs.map(tx => {
+                if(tx.id === txId) tx.status = 'Completed';
+                return tx;
             });
+            saveData(users, txs);
             loadAdminData();
         }
 
