@@ -37,7 +37,6 @@
                 <button onclick="switchTab('tasks')" id="tab-btn-tasks" class="flex-1 py-2 font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition text-sm">Tasks</button>
                 <button onclick="switchTab('referrals')" id="tab-btn-referrals" class="flex-1 py-2 font-bold rounded-lg text-slate-600 transition text-sm">Invite & Earn</button>
                 <button onclick="switchTab('wallet')" id="tab-btn-wallet" class="flex-1 py-2 font-bold rounded-lg text-slate-600 transition text-sm">Withdraw</button>
-                <!-- Admin Tab button will be injected here ONLY if user is admin -->
             </div>
 
             <!-- Tasks Tab -->
@@ -77,9 +76,10 @@
 
             <!-- Wallet / Withdraw Tab -->
             <div id="tab-wallet" class="hidden space-y-4">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border">
-                    <h2 class="font-bold text-lg mb-4">Request M-Pesa Payout</h2>
-                    <input type="number" id="withdraw-amount" placeholder="Amount in KES (Min: 50)" class="w-full mb-4 p-3 border rounded-xl outline-none text-sm">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
+                    <h2 class="font-bold text-lg">Request M-Pesa Payout</h2>
+                    <p class="text-xs text-slate-500">Payouts are manually processed and sent from Pochi la Biashara: <strong class="text-indigo-600">0112508803</strong></p>
+                    <input type="number" id="withdraw-amount" placeholder="Amount in KES (Min: 50)" class="w-full p-3 border rounded-xl outline-none text-sm">
                     <button onclick="requestWithdrawal()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-3 rounded-xl font-bold transition text-sm">Withdraw via M-Pesa</button>
                 </div>
             </div>
@@ -87,7 +87,8 @@
             <!-- Admin Panel Tab (Hidden by default) -->
             <div id="tab-admin" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border">
-                    <h2 class="font-bold text-lg mb-4 text-indigo-600">Admin Control Center</h2>
+                    <h2 class="font-bold text-lg mb-2 text-indigo-600">Admin Control Center</h2>
+                    <p class="text-xs text-slate-500 mb-4">Payout Account: Pochi la Biashara (<strong class="text-slate-700">0112508803</strong>)</p>
                     <h3 class="font-semibold text-sm text-slate-600 mb-2">Pending Payout Requests</h3>
                     <div id="admin-transactions" class="space-y-2">
                         <!-- Loaded dynamically -->
@@ -168,7 +169,6 @@
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('dashboard-screen').classList.remove('hidden');
 
-            // Inject Admin tab button dynamically ONLY if user is the admin
             const tabsContainer = document.getElementById('tabs-container');
             const existingAdminBtn = document.getElementById('tab-btn-admin-nav');
             
