@@ -32,29 +32,29 @@
         </header>
 
         <main class="max-w-2xl mx-auto p-4 mt-4 space-y-6">
-            <!-- Tabs -->
-            <div class="flex bg-slate-200 p-1 rounded-xl">
-                <button onclick="switchTab('tasks')" id="tab-btn-tasks" class="flex-1 py-2 font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition">Tasks</button>
-                <button onclick="switchTab('referrals')" id="tab-btn-referrals" class="flex-1 py-2 font-bold rounded-lg text-slate-600 transition">Invite & Earn</button>
-                <button onclick="switchTab('wallet')" id="tab-btn-wallet" class="flex-1 py-2 font-bold rounded-lg text-slate-600 transition">Withdraw</button>
-                <button onclick="switchTab('admin')" id="tab-btn-admin" class="hidden flex-1 py-2 font-bold rounded-lg text-slate-600 transition">Admin</button>
+            <!-- Dynamic Tabs Container -->
+            <div id="tabs-container" class="flex bg-slate-200 p-1 rounded-xl gap-1">
+                <button onclick="switchTab('tasks')" id="tab-btn-tasks" class="flex-1 py-2 font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition text-sm">Tasks</button>
+                <button onclick="switchTab('referrals')" id="tab-btn-referrals" class="flex-1 py-2 font-bold rounded-lg text-slate-600 transition text-sm">Invite & Earn</button>
+                <button onclick="switchTab('wallet')" id="tab-btn-wallet" class="flex-1 py-2 font-bold rounded-lg text-slate-600 transition text-sm">Withdraw</button>
+                <!-- Admin Tab button will be injected here ONLY if user is admin -->
             </div>
 
             <!-- Tasks Tab -->
             <div id="tab-tasks" class="space-y-4">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border flex items-center justify-between">
                     <div>
-                        <h3 class="font-bold text-slate-800">Watch Sponsored Ad & Answer</h3>
+                        <h3 class="font-bold text-slate-800 text-sm">Watch Sponsored Ad & Answer</h3>
                         <p class="text-xs text-slate-500 mt-1">Earn KES 5.00 for watching a 30s partner video.</p>
                     </div>
-                    <button onclick="completeTask('Watch Ad', 5)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">Start</button>
+                    <button onclick="completeTask('Watch Ad', 5)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow">Start</button>
                 </div>
                 <div class="bg-white p-5 rounded-2xl shadow-sm border flex items-center justify-between">
                     <div>
-                        <h3 class="font-bold text-slate-800">Quick Market Survey</h3>
+                        <h3 class="font-bold text-slate-800 text-sm">Quick Market Survey</h3>
                         <p class="text-xs text-slate-500 mt-1">Complete a 2-minute survey about local apps.</p>
                     </div>
-                    <button onclick="completeTask('Survey', 15)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow">Start</button>
+                    <button onclick="completeTask('Survey', 15)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow">Start</button>
                 </div>
             </div>
 
@@ -79,12 +79,12 @@
             <div id="tab-wallet" class="hidden space-y-4">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border">
                     <h2 class="font-bold text-lg mb-4">Request M-Pesa Payout</h2>
-                    <input type="number" id="withdraw-amount" placeholder="Amount in KES (Min: 50)" class="w-full mb-4 p-3 border rounded-xl outline-none">
-                    <button onclick="requestWithdrawal()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-3 rounded-xl font-bold transition">Withdraw via M-Pesa</button>
+                    <input type="number" id="withdraw-amount" placeholder="Amount in KES (Min: 50)" class="w-full mb-4 p-3 border rounded-xl outline-none text-sm">
+                    <button onclick="requestWithdrawal()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-3 rounded-xl font-bold transition text-sm">Withdraw via M-Pesa</button>
                 </div>
             </div>
 
-            <!-- Admin Panel Tab -->
+            <!-- Admin Panel Tab (Hidden by default) -->
             <div id="tab-admin" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border">
                     <h2 class="font-bold text-lg mb-4 text-indigo-600">Admin Control Center</h2>
@@ -125,8 +125,6 @@
             if(!phone || !name) return alert('Please enter both name and phone number');
 
             let { users, txs } = getData();
-
-            // Force strict admin check: ONLY 254700000000 gets admin rights
             const isAdminUser = (phone === '254700000000');
 
             if(!users[phone]) {
@@ -152,7 +150,6 @@
                     localStorage.removeItem('earnapp_ref_sponsor');
                 }
             } else {
-                // Ensure existing user records also respect the strict rule
                 users[phone].isAdmin = isAdminUser;
             }
 
@@ -171,13 +168,21 @@
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('dashboard-screen').classList.remove('hidden');
 
-            // Explicitly show or hide the admin tab based on the strict check
-            const adminTabBtn = document.getElementById('tab-btn-admin');
+            // Inject Admin tab button dynamically ONLY if user is the admin
+            const tabsContainer = document.getElementById('tabs-container');
+            const existingAdminBtn = document.getElementById('tab-btn-admin-nav');
+            
             if(currentUser.isAdmin === true) {
-                adminTabBtn.classList.remove('hidden');
+                if(!existingAdminBtn) {
+                    const adminBtn = document.createElement('button');
+                    adminBtn.id = 'tab-btn-admin-nav';
+                    adminBtn.onclick = () => switchTab('admin');
+                    adminBtn.className = 'flex-1 py-2 font-bold rounded-lg text-slate-600 transition text-sm';
+                    adminBtn.innerText = 'Admin';
+                    tabsContainer.appendChild(adminBtn);
+                }
             } else {
-                adminTabBtn.classList.add('hidden');
-                // If user accidentally lands on admin tab, force them back to tasks
+                if(existingAdminBtn) existingAdminBtn.remove();
                 switchTab('tasks');
             }
         }
@@ -266,15 +271,24 @@
 
             ['tasks', 'referrals', 'wallet', 'admin'].forEach(t => {
                 const el = document.getElementById(`tab-${t}`);
-                const btn = document.getElementById(`tab-btn-${t}`);
                 if(el) el.classList.add('hidden');
-                if(btn) btn.className = 'flex-1 py-2 font-bold rounded-lg text-slate-600 transition';
+            });
+
+            ['tab-btn-tasks', 'tab-btn-referrals', 'tab-btn-wallet', 'tab-btn-admin-nav'].forEach(btnId => {
+                const btn = document.getElementById(btnId);
+                if(btn) btn.className = 'flex-1 py-2 font-bold rounded-lg text-slate-600 transition text-sm';
             });
 
             const activeTab = document.getElementById(`tab-${tab}`);
-            const activeBtn = document.getElementById(`tab-btn-${tab}`);
             if(activeTab) activeTab.classList.remove('hidden');
-            if(activeBtn) activeBtn.className = 'flex-1 py-2 font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition';
+
+            let activeBtn = document.getElementById(`tab-btn-${tab}`) || document.getElementById('tab-btn-admin-nav');
+            if(tab !== 'admin' && document.getElementById(`tab-btn-${tab}`)) {
+                activeBtn = document.getElementById(`tab-btn-${tab}`);
+            }
+            if(activeBtn) {
+                activeBtn.className = 'flex-1 py-2 font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition text-sm';
+            }
 
             if(tab === 'admin') loadAdminData();
         }
