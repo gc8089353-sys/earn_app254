@@ -100,7 +100,6 @@
     <script>
         let currentUser = null;
 
-        // Check URL for referral parameter on load
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const refBy = urlParams.get('ref');
@@ -126,16 +125,19 @@
             if(!phone || !name) return alert('Please enter both name and phone number');
 
             let { users, txs } = getData();
-            let isNew = false;
 
             if(!users[phone]) {
-                isNew = true;
-                users[phone] = { name, phone, balance: 0, referrals: 0, isAdmin: (phone === '254700000000') };
+                users[phone] = { 
+                    name, 
+                    phone, 
+                    balance: 0, 
+                    referrals: 0, 
+                    isAdmin: (phone === '254700000000') // ONLY this number is admin
+                };
                 
-                // Check if signed up via a referral link
                 const sponsorPhone = localStorage.getItem('earnapp_ref_sponsor');
                 if(sponsorPhone && users[sponsorPhone] && sponsorPhone !== phone) {
-                    users[sponsorPhone].balance += 10; // Give sponsor KES 10 reward
+                    users[sponsorPhone].balance += 10;
                     users[sponsorPhone].referrals += 1;
                     txs.unshift({
                         id: Date.now(),
@@ -156,15 +158,17 @@
             document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
             document.getElementById('referral-count').innerText = currentUser.referrals || 0;
             
-            // Generate unique referral link
             const baseUrl = window.location.origin + window.location.pathname;
             document.getElementById('referral-link').value = `${baseUrl}?ref=${currentUser.phone}`;
 
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('dashboard-screen').classList.remove('hidden');
 
-            if(currentUser.isAdmin) {
+            // Strictly show Admin tab ONLY if user is admin
+            if(currentUser.isAdmin === true) {
                 document.getElementById('tab-btn-admin').classList.remove('hidden');
+            } else {
+                document.getElementById('tab-btn-admin').classList.add('hidden');
             }
         }
 
@@ -192,7 +196,7 @@
             const refLinkInput = document.getElementById('referral-link');
             refLinkInput.select();
             navigator.clipboard.writeText(refLinkInput.value);
-            alert('Referral link copied to clipboard! Share it with your friends.');
+            alert('Referral link copied to clipboard!');
         }
 
         function requestWithdrawal() {
