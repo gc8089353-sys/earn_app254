@@ -126,13 +126,16 @@
 
             let { users, txs } = getData();
 
+            // Force strict admin check: ONLY 254700000000 gets admin rights
+            const isAdminUser = (phone === '254700000000');
+
             if(!users[phone]) {
                 users[phone] = { 
                     name, 
                     phone, 
                     balance: 0, 
                     referrals: 0, 
-                    isAdmin: (phone === '254700000000') // ONLY this number is admin
+                    isAdmin: isAdminUser 
                 };
                 
                 const sponsorPhone = localStorage.getItem('earnapp_ref_sponsor');
@@ -148,7 +151,11 @@
                     });
                     localStorage.removeItem('earnapp_ref_sponsor');
                 }
+            } else {
+                // Ensure existing user records also respect the strict rule
+                users[phone].isAdmin = isAdminUser;
             }
+
             currentUser = users[phone];
             saveData(users, txs);
             initDashboard();
@@ -164,11 +171,14 @@
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('dashboard-screen').classList.remove('hidden');
 
-            // Strictly show Admin tab ONLY if user is admin
+            // Explicitly show or hide the admin tab based on the strict check
+            const adminTabBtn = document.getElementById('tab-btn-admin');
             if(currentUser.isAdmin === true) {
-                document.getElementById('tab-btn-admin').classList.remove('hidden');
+                adminTabBtn.classList.remove('hidden');
             } else {
-                document.getElementById('tab-btn-admin').classList.add('hidden');
+                adminTabBtn.classList.add('hidden');
+                // If user accidentally lands on admin tab, force them back to tasks
+                switchTab('tasks');
             }
         }
 
@@ -223,6 +233,7 @@
         }
 
         function loadAdminData() {
+            if(!currentUser.isAdmin) return;
             let { txs } = getData();
             const container = document.getElementById('admin-transactions');
             if(txs.length === 0) {
@@ -251,6 +262,8 @@
         }
 
         function switchTab(tab) {
+            if(tab === 'admin' && !currentUser.isAdmin) return;
+
             ['tasks', 'referrals', 'wallet', 'admin'].forEach(t => {
                 const el = document.getElementById(`tab-${t}`);
                 const btn = document.getElementById(`tab-btn-${t}`);
