@@ -188,24 +188,39 @@
         }
 
         function completeTask(taskName, reward) {
-            alert(`Completing task: ${taskName}. Simulating verification...`);
-            let { users, txs } = getData();
+    // Open your live Adsterra Smartlink in a new tab
+    window.open('https://arwf.org/4/bab012ebad7d5f948f1428668f96fe4e', '_blank');
 
-            users[currentUser.phone].balance += Number(reward);
-            currentUser = users[currentUser.phone];
+    // Inform the user to complete the ad/task and return
+    alert(`Complete the task/ad in the new tab, then return here to claim your KES ${reward}!`);
 
-            txs.unshift({
-                id: Date.now(),
-                phone: currentUser.phone,
-                type: 'EARN',
-                amount: reward,
-                status: 'Completed'
-            });
+    let { users, txs } = getData();
+    
+    // Safety check if user session is active
+    if (!currentUser || !users[currentUser.phone]) {
+        alert("Please log in again.");
+        return;
+    }
 
-            saveData(users, txs);
-            document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
-            alert(`Successfully earned KES ${reward}!`);
+    users[currentUser.phone].balance += Number(reward);
+    currentUser = users[currentUser.phone];
+
+    txs.unshift({
+        id: Date.now(),
+        phone: currentUser.phone,
+        type: 'EARN',
+        amount: Number(reward),
+        status: 'Completed'
+    });
+
+    saveData(users, txs);
+    
+    // Refresh UI elements
+    document.getElementById('user-balance').innerText = currentUser.balance.toFixed(2);
+    loadTasks();
         }
+        
+            
 
         function copyReferralLink() {
             const refLinkInput = document.getElementById('referral-link');
